@@ -1,0 +1,216 @@
+USE Coursearea_Case_Study;
+
+---Can see from this query that there are 33 individuals for this table when there should be 30 
+
+SELECT 
+	DISTINCT Id, Id
+FROM dbo.Daily_Activity;
+
+
+---This query shows there is large variation for the number of records for each individual which may skew results
+---Individuals who have less then 30 days recorded will be deleted
+---6290855005, 3372868164, 4057192912,8792009665, 7007744171, 6775888955, 6117666160, 2347167796, 8253242879
+
+SELECT Id, COUNT(Id) 
+
+FROM dbo.Daily_Activity
+
+GROUP BY Id;
+
+---query to delete the rows with <30 days of data
+
+DELETE FROM dbo.Daily_Activity
+WHERE Id IN (6290855005, 3372868164, 4057192912,8792009665, 7007744171, 6775888955, 6117666160, 2347167796, 8253242879);
+
+---Now only 24 individuals for the study
+
+SELECT Id, COUNT(Id) 
+
+FROM dbo.Daily_Activity
+
+GROUP BY Id;
+
+SELECT *
+
+  , ROUND(TotalDistance,2) AS TotalDistanceRounded
+  , ROUND(TrackerDistance,2) AS TrackerDistanceRounded
+  , ROUND(VeryActiveDistance,2) AS VeryActiveDistanceRounded
+  , ROUND(ModeratelyActiveDistance,2) AS ModeratelyActiveDistanceRounded
+  , ROUND(LightActiveDistance,2) AS LightActiveDistanceRounded
+
+FROM dbo.Daily_Activity;
+
+
+ ---Checking to see if Id is shared between all tables
+
+ SELECT INFORMATION_SCHEMA.COLUMNS.TABLE_NAME, INFORMATION_SCHEMA.COLUMNS.COLUMN_NAME
+ FROM INFORMATION_SCHEMA.COLUMNS
+ WHERE COLUMN_NAME = 'Id';
+
+ ---Looking to see if tables have columns with date related data
+
+
+ SELECT INFORMATION_SCHEMA.COLUMNS.TABLE_NAME, INFORMATION_SCHEMA.COLUMNS.DATA_TYPE
+ FROM INFORMATION_SCHEMA.COLUMNS
+ WHERE 
+ DATA_TYPE = 'date'
+ OR 
+ DATA_TYPE = 'datetime2'
+ OR 
+ DATA_TYPE = 'datetime'
+ OR 
+ DATA_TYPE = 'timestamp'
+ OR
+ data_type = 'year'
+
+
+ ---Every table has a either a datetime, datetime2, or date, datatype column
+ ---Tables at the daily level(date): Daily_Calories, Daily_Intensities, Daily_Steps, Daily_Activity
+ ---For a daily analysis we will use these tables
+
+
+ SELECT INFORMATION_SCHEMA.COLUMNS.TABLE_NAME, INFORMATION_SCHEMA.COLUMNS.COLUMN_NAME
+ FROM INFORMATION_SCHEMA.COLUMNS
+ WHERE 
+ TABLE_NAME = 'Daily_Activity'
+ OR
+ TABLE_NAME = 'Daily_Calories'
+ OR
+ TABLE_NAME = 'Daily_Intensities'
+ OR
+ TABLE_NAME = 'Daily_Steps'
+
+---Columns in common 'Id', 'ActivityDay', 'Calories'
+---Joining Daily_Activity, Daily_Calories, and Daily_Steps for analysis
+---Creating a view for the result of the query 
+
+GO
+
+CREATE VIEW dbo.DailyResultsInfo
+AS
+SELECT 
+A.Id,
+A.ActivityDate,
+A.TotalSteps,
+A.TotalDistance,
+A.TrackerDistance,
+A.LoggedActivitiesDistance,
+A.VeryActiveDistance,
+A.ModeratelyActiveDistance,
+A.LightActiveDistance,
+A.SedentaryActiveDistance,
+A.VeryActiveMinutes,
+A.FairlyActiveMinutes,
+A.LightlyActiveMinutes,
+A.SedentaryMinutes,
+A.Calories,
+S.StepTotal,
+Sl.SleepDay,
+Sl.TotalSleepRecords,
+Sl.TotalMinutesAsleep,
+Sl.TotalTimeInBed
+
+FROM
+ dbo.Daily_Activity A
+LEFT JOIN
+ dbo.Daily_Calories C
+ON
+ A.Id = C.Id
+ AND A.ActivityDate=C.ActivityDay
+ AND A.Calories = C.Calories
+
+LEFT JOIN
+ dbo.Daily_Steps S
+ON
+ A.Id = S.Id
+ AND A.ActivityDate=S.ActivityDay
+LEFT JOIN
+ dbo.Sleep_Per_Day Sl
+ON
+ A.Id = Sl.Id
+ AND A.ActivityDate=Sl.SleepDay
+
+ GO
+
+---Finding Max values for each participant
+
+SELECT 
+Id,
+MAX(TotalSteps) AS MaxTotalSteps,
+MAX(TotalDistance) AS MaxTotalDistance,
+MAX(TrackerDistance) AS MaxTrackerDistance,
+MAX(LoggedActivitiesDistance) AS MaxLoggedActivitiesDistance,
+MAX(VeryActiveDistance) AS MaxVeryActiveDistance,
+MAX(ModeratelyActiveDistance) AS MaxModeratelyActivitiesDistance,
+MAX(LightActiveDistance) AS MaxLigtActiveDistance,
+MAX(SedentaryActiveDistance) As MaxSedentaryActiveDistance,
+MAX(VeryActiveMinutes) AS MaxVeryActiveMinutes,
+MAX(FairlyActiveMinutes) AS MaxFarilyActiveMinutes,
+MAX(LightlyActiveMinutes) AS MaxLightlyActiveMinutes,
+MAX(SedentaryMinutes) AS MaxSedentaryMinutes,
+MAX(Calories) AS MaxCalories,
+MAX(SleepDay) AS MaxSleepDay,
+MAX(TotalSleepRecords) AS MAxTotalSleepREcords,
+MAX(TotalMinutesAsleep) AS MaxTotalMinutesAsleep,
+MAX(TotalTimeInBed) AS MaxTotalTimeInBed
+FROM dbo.DailyResultsInfo
+GROUP BY Id
+ORDER BY Id;
+
+
+---Finding Min values for each participant
+
+SELECT 
+Id,
+MIN(TotalSteps) AS MinTotalSteps,
+MIN(TotalDistance) AS MinTotalDistance,
+MIN(TrackerDistance) AS MinTrackerDistance,
+MIN(LoggedActivitiesDistance) AS MinLoggedActivitiesDistance,
+MIN(VeryActiveDistance) AS MinVeryActiveDistance,
+MIN(ModeratelyActiveDistance) AS MinModeratelyActivitiesDistance,
+MIN(LightActiveDistance) AS MinLigtActiveDistance,
+MIN(SedentaryActiveDistance) As MinSedentaryActiveDistance,
+MIN(VeryActiveMinutes) AS MinVeryActiveMinutes,
+MIN(FairlyActiveMinutes) AS MinFarilyActiveMinutes,
+MIN(LightlyActiveMinutes) AS MinLightlyActiveMinutes,
+MIN(SedentaryMinutes) AS MinSedentaryMinutes,
+MIN(Calories) AS MinCalories,
+MIN(SleepDay) AS MinSleepDay,
+MIN(TotalSleepRecords) AS MinTotalSleepRecords,
+MIN(TotalMinutesAsleep) AS MinTotalMinutesAsleep,
+MIN(TotalTimeInBed) AS MinTotalTimeInBed
+FROM dbo.DailyResultsInfo
+GROUP BY Id
+ORDER BY Id;
+
+
+---Finding Average values for each participant
+
+SELECT 
+Id, 
+AVG(TotalSteps) AS AVGTotalSteps, 
+AVG(TotalDistance) AS AVGTotalDistance,
+AVG(TrackerDistance) AS AVGTrackerDistance,
+AVG(LoggedActivitiesDistance) AS AVGLoggedActivitiesDistance,
+AVG(VeryActiveDistance) AS AVGVeryActiveDistance,
+AVG(ModeratelyActiveDistance) AS AVGModeratelyActiveDistance,
+AVG(LightActiveDistance) AS AVGLightActiveDistance,
+AVG(SedentaryActiveDistance) AS AVGSedentaryActiveDistance,
+AVG(VeryActiveMinutes) AS AVGVeryActiveMinutes,
+AVG(FairlyActiveMinutes) AS AVGFarirlyActiveMinutes,
+AVG(LightlyActiveMinutes) AS AVGLigtlyActiveMinutes,
+AVG(SedentaryMinutes) AS AVGSedentaryMinutes,
+AVG(Calories) AS AVGCalories,
+AVG(TotalSleepRecords) AS AVGTotalSleepRecords,
+AVG(TotalMinutesAsleep) AS AVGTotalMinutesAsleep,
+AVG(TotalTimeInBed) AS AVGtotalTimeInBed
+FROM dbo.DailyResultsInfo
+GROUP BY Id
+ORDER BY Id;
+
+SELECT * FROM dbo.DailyResultsInfo
+
+
+
+
+
